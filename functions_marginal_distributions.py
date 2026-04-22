@@ -249,7 +249,7 @@ def breeden_litzenberger(smile_params, S, T, r, n_strikes=500, method="svi"):
     pdf = np.exp(r * T) * d2C
     pdf = np.maximum(pdf, 0)
     pdf = gaussian_filter1d(pdf, sigma=4)
-    pdf /= np.trapz(pdf, K_grid)
+    pdf /= np.trapezoid(pdf, K_grid)
 
     return K_grid, pdf
 
@@ -264,3 +264,82 @@ def extract_cdf(K_grid, pdf):
     cdf /= cdf[-1]
     return cdf
 
+def sabr_vol(F, K, T, alpha, beta, rho, nu):
+    """
+    Hagan et al. (2002) SABR implied volatility approximation.
+    Returns the implied vol for a given strike K, forward F, maturity T
+    and SABR parameters alpha, beta, rho, nu.
+    """
+    if abs(F - K) < 1e-10:
+        # ATM formula
+        term1 = alpha / (F ** (1 - beta))
+        term2 = 1 + (
+            ((1 - beta) ** 2 / 24) * (alpha ** 2 / F ** (2 - 2 * beta))
+            + (rho * beta * nu * alpha) / (4 * F ** (1 - beta))
+            + ((2 - 3 * rho ** 2) / 24) * nu ** 2
+        ) * T
+        return term1 * term2
+
+    log_FK = np.log(F / K)
+    FK_mid = (F * K) ** ((1 - beta) / 2)
+
+    z     = (nu / alpha) * FK_mid * log_FK
+    chi_z = np.log((np.sqrt(1 - 2 * rho * z + z ** 2) + z - rho) / (1 - rho))
+
+    term_A = alpha / (
+        FK_mid * (
+            1
+            + ((1 - beta) ** 2 / 24) * log_FK ** 2
+            + ((1 - beta) ** 4 / 1920) * log_FK ** 4
+        )
+    )
+    term_B = z / chi_z if abs(chi_z) > 1e-10 else 1.0
+    term_C = 1 + (
+        ((1 - beta) ** 2 / 24) * (alpha ** 2 / FK_mid ** 2)
+        + (rho * beta * nu * alpha) / (4 * FK_mid)
+        + ((2 - 3 * rho ** 2) / 24) * nu ** 2
+    ) * T
+
+    return term_A * term_B * term_C
+
+
+def calibrate_sabr(smile_df, r=0.05, beta=0.5):
+    """
+    Calibrates SABR parameters (alpha, rho, nu) to the observed implied
+    volatility smile for a single asset, with beta fixed at 0.5.
+    Uses least squares minimisation via scipy.optimize.minimize.
+    Returns a dictionary of calibrated parameters plus forward and maturity.
+    """
+    S = smile_df["S"].iloc[0]
+    T = smile_df["T"].iloc[0]
+    F = S * np.exp(r * T)
+
+    strikes = smile_df["strike"].values
+    iv_mkt  = smile_df["iv"].values
+
+    def loss(params):
+        alpha, rho, nu = params
+        if alpha <= 0 or nu <= 0 or abs(rho) >= 1:
+            return 1e6
+        iv_fit = np.array([sabr_vol(F, K, T, alpha, beta, rho, nu) for K in strikes])
+        return np.sum((iv_fit - iv_mkt) ** 2)
+
+    best_result = None
+    best_loss   = np.inf
+
+    # Multiple starting points for robustness
+    for alpha0 in [0.2, 0.4, 0.6]:
+        for rho0 in [-0.5, 0.0]:
+            for nu0 in [0.3, 0.6]:
+                res = minimize(loss, [alpha0, rho0, nu0],
+                               method="Nelder-Mead",
+                               options={"maxiter": 2000, "xatol": 1e-6})
+                if res.fun < best_loss:
+                    best_loss   = res.fun
+                    best_result = res
+
+    alpha, rho, nu = best_result.x
+    return {
+        "alpha": alpha, "beta": beta, "rho": rho, "nu": nu,
+        "F": F, "T": T, "S": S
+    }
