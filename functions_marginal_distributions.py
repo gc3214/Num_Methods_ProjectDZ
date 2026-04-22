@@ -249,7 +249,7 @@ def breeden_litzenberger(smile_params, S, T, r, n_strikes=500, method="svi"):
     pdf = np.exp(r * T) * d2C
     pdf = np.maximum(pdf, 0)
     pdf = gaussian_filter1d(pdf, sigma=4)
-    pdf /= np.trapezoid(pdf, K_grid)
+    pdf /= np.trapz(pdf, K_grid)
 
     return K_grid, pdf
 
