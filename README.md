@@ -40,7 +40,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 5. **Breeden–Litzenberger extraction.** The risk-neutral density is recovered as:
 
-$$q(K) = e^{rT} \frac{\partial^2 C}{\partial K^2}$$
+$$q(K) = e^{rT}\frac{\partial^2 C}{\partial K^2}$$
 
    Monotone prices are enforced via isotonic regression. The second derivative is computed using a Savitzky–Golay filter (more stable than finite differences). A light Gaussian smoothing is applied and the PDF is normalised to integrate to one.
 
