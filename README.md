@@ -86,14 +86,12 @@ $$\lambda = 2\, t_{\nu+1}\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0
 
 for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets.
 
-
-<img width="1000" height="402" alt="Screenshot 2026-04-29 at 7 17 57 PM" src="https://github.com/user-attachments/assets/0533dacf-04fb-4f38-9826-f914137321ce" />
 <img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 16 41 PM" src="https://github.com/user-attachments/assets/0548f810-651b-4b6a-8251-14dc22407063" />
 <img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 16 30 PM" src="https://github.com/user-attachments/assets/3403fbb8-d9e1-4824-94ce-063282fd3896" />
 
 
 **Diagnostics:** Uniform-space scatter plots confirm elliptical (Gaussian) vs. corner-clustered (Student-*t*) dependence. Marginal recovery checks verify that histogramming the simulated prices reproduces the SABR density from Part 1.
-
+<img width="1000" height="402" alt="Screenshot 2026-04-29 at 7 17 57 PM" src="https://github.com/user-attachments/assets/0533dacf-04fb-4f38-9826-f914137321ce" />
 ---
 
 ## Part 3 — Monte Carlo Pricing with Control Variate
