@@ -4,11 +4,147 @@
 
 ---
 
-## Overview
+## Motivation
 
-This project prices a European basket call option on five AI-sector equities using a three-stage framework that connects market-implied marginal distributions, copula-based dependence modelling, and variance-reduced Monte Carlo simulation. The workflow is structured as a Jupyter notebook split across four parts; Part 4 is currently in progress.
+Sell-side structured products desks have seen strong demand from hedge funds and long-only managers for basket options on high-profile AI equities. These instruments offer leveraged, defined-risk thematic exposure without requiring the buyer to manage delta across five separate single-stock books. Pricing them correctly is non-trivial: each constituent has a distinct implied volatility surface, and the joint payoff is sensitive to both the shape of the individual risk-neutral distributions and the assumed dependence structure across assets.
 
-The motivation is a realistic sell-side structured products context: hedge funds and long-only managers demand basket options on high-profile AI names for leveraged, defined-risk thematic exposure. Pricing these correctly requires respecting each asset's implied volatility surface individually and modelling the joint terminal distribution with an appropriate dependence structure.
+This project prices an at-the-money European basket call on five AI-sector equities using a three-stage framework, then wraps the best-performing method into an interactive pricing calculator.
+
+---
+
+## Framework at a Glance
+
+| Stage | Method | Output |
+|-------|--------|--------|
+| Part 1 | SABR calibration + Breeden–Litzenberger | Risk-neutral PDF per asset |
+| Part 2 | Gaussian & Student-*t* copulas | Joint terminal distribution |
+| Part 3 | Monte Carlo + geometric control variate | Basket call price & SE |
+| Part 4 | Interactive calculator (Student-*t* + CV) | Live pricer *(in progress)* |
+
+---
+
+## Part 1 — Risk-Neutral Marginal Distributions
+
+### Objective
+
+Extract the market-implied risk-neutral PDF for each asset directly from the observed option chain — no lognormality assumption imposed on the terminal distribution.
+
+### Pipeline
+
+**1. Option chain ingestion.** OTM option prices are fetched live from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset, ensuring adequate strike coverage across the smile.
+
+**2. SABR calibration.** The SABR model (Hagan et al. 2002) describes the joint dynamics of the forward price and instantaneous volatility:
+
+$$dF_t = \sigma_t F_t^\beta\, dW_t^1, \qquad d\sigma_t = \nu\,\sigma_t\, dW_t^2, \qquad d\langle W^1, W^2\rangle_t = \rho\, dt$$
+
+Parameters $(\alpha, \rho, \nu)$ are calibrated by minimising RMSE between the Hagan approximation and market implied vols. $\beta = 0.5$ is fixed as the standard equity convention, leaving three free parameters.
+
+**3. Dense repricing.** Calibrated SABR vols are evaluated on a 500-point strike grid spanning $[0.6S,\ 1.6S]$ and converted back to call prices via Black–Scholes.
+
+**4. Breeden–Litzenberger extraction.** The risk-neutral density is recovered from the second derivative of the call surface:
+
+$$q(K) = e^{rT}\,\frac{\partial^2 C}{\partial K^2}$$
+
+Monotone prices are enforced via isotonic regression before differentiation. The second derivative is computed with a Savitzky–Golay filter, which fits local polynomials and is significantly more stable than finite differences. A light Gaussian smoothing is applied and the PDF is normalised to integrate to one.
+
+**5. Cross-validation.** Each SABR density is benchmarked against a numerical extraction (SVI or smoothing spline). The SABR density is adopted as the primary marginal because it produces well-behaved, monotone CDFs required by the copula in Part 2.
+
+### Results
+
+The SABR model achieves a good fit across all five names, tracking both the put-side skew and the OTM call wing closely.
+
+- **NVDA and GOOGL** calibrate to negative $\rho$, consistent with the equity leverage effect — negative spot-vol correlation produces the standard downside skew.
+- **PLTR and STX** calibrate to near-zero $\rho$, producing the more symmetric smiles visible in the data.
+- **STX** stands out with a markedly higher $\alpha$ and lower $\nu$ than the other four names, reflecting a steep but less curved surface driven by structurally elevated implied volatility rather than active stochastic volatility dynamics.
+
+The extracted risk-neutral densities display the right-skewed, log-normal-like shape expected under risk-neutral pricing, with the mode sitting slightly left of spot in each case. **NVDA and PLTR** produce broad, fat-tailed densities consistent with their high IV levels; **MSFT and GOOGL** yield tighter, more concentrated distributions; **STX** is the widest in relative terms with non-negligible left-tail mass.
+
+Cross-validation shows close agreement between SABR and numerical densities for NVDA, PLTR, and GOOGL, validating the extraction pipeline. The largest discrepancies appear for MSFT and STX, where the numerical spline picks up localised features in the raw option chain that the parametric SABR surface smooths over. This reinforces the preference for SABR as the primary marginal: it is smoother, monotone, and more appropriate as input to the copula.
+
+---
+
+## Part 2 — Copula-Based Dependence Modelling
+
+### Objective
+
+Model the joint terminal distribution of the five assets while exactly preserving the market-implied marginals from Part 1. Sklar's theorem guarantees that any multivariate distribution can be decomposed into its marginals and a copula encoding their dependence structure.
+
+### Inverse CDF Construction
+
+For each asset, the discrete $(K, \text{CDF})$ table from Part 1 is interpolated into a callable inverse CDF $F_k^{-1}$. Any uniform sample $U_k \sim \mathcal{U}(0,1)$ maps to a terminal price $S_k^T = F_k^{-1}(U_k)$, preserving the full shape of the market-implied distribution.
+
+### Pearson Correlation vs Copula Parameter
+
+The pairwise Pearson correlation matrix $R^{\text{Pearson}}$ is estimated from one year of daily log-returns. A critical subtlety: the Gaussian copula parameter $\rho_{ij}$ is **not** equal to the Pearson correlation $r_{ij}$ when marginals are non-Gaussian. Plugging $R^{\text{Pearson}}$ directly into the copula would produce simulated prices with systematically incorrect pairwise correlations.
+
+The correct copula parameter is solved for each pair $(i, j)$ via Brent's root-finding:
+
+$$\text{find}\ \rho_{ij}\ \text{s.t.}\ \text{Corr}\!\left(F_i^{-1}(\Phi(Z_i)),\, F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
+
+where $(Z_i, Z_j)$ are standard normal with correlation $\rho_{ij}$. The objective is evaluated on a fixed set of 20,000 standard normal pairs to ensure numerical stability across Brent iterations. Assets with heavier tails or more skewed distributions require a higher copula $\rho$ to produce the same linear correlation in price space.
+
+### Gaussian Copula
+
+$n = 10{,}000$ correlated standard normals are drawn via Cholesky decomposition of $R^{\text{copula}}$, transformed to uniforms $U_k = \Phi(Z_k)$, and mapped to terminal prices via $F_k^{-1}$. In the uniform-space scatter plots, samples form elliptical clouds confirming **zero tail dependence**: asymptotically, joint extreme moves are independent under this model.
+
+### Student-*t* Copula
+
+The Gaussian copula's zero-tail-dependence property is often unrealistic for equity baskets, where crashes tend to cluster across names. The Student-*t* copula introduces **symmetric tail dependence** via a shared chi-squared mixing variable. If $\mathbf{Z} \sim \mathcal{N}(\mathbf{0}, R)$ and $W \sim \chi^2_\nu / \nu$ independently, then $\mathbf{X} = \mathbf{Z} / \sqrt{W}$ follows a multivariate $t$ with $\nu$ degrees of freedom. The pairwise tail dependence coefficient is:
+
+$$\lambda = 2\, t_{\nu+1}\!\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
+
+for any finite $\nu$ and $\rho > -1$. $\nu$ is estimated by maximum likelihood on the historical log-return data. In the uniform-space scatter plots, Student-*t* samples show visible corner clustering — more mass near $(0,0)$ and $(1,1)$ relative to the Gaussian — confirming higher probability assigned to joint extreme events.
+
+**Diagnostic:** Marginal recovery checks confirm that histogramming the simulated prices under both copulas closely reproduces the SABR density from Part 1, validating the inverse CDF interpolation and sampling routines end-to-end.
+
+---
+
+## Part 3 — Monte Carlo Pricing with Control Variate
+
+### Contract Specification
+
+| Parameter | Value |
+|-----------|-------|
+| Basket | Equal-weighted arithmetic mean, 5 assets |
+| Strike $K$ | ATM — average of five spot prices |
+| Maturity $T$ | From Part 1 option chain expiry |
+| Risk-free rate $r$ | 5% |
+| Simulations | 10,000 |
+
+### Payoff and Estimator
+
+$$V_T = \max\!\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K,\; 0\right), \qquad \hat{V}_0 = e^{-rT} \cdot \frac{1}{N_{\text{sim}}} \sum_{i=1}^{N_{\text{sim}}} V_T^{(i)}$$
+
+### Control Variate: Geometric Basket
+
+The geometric basket call has a known closed-form price under log-normal geometry. Since the arithmetic and geometric basket payoffs are driven by the same simulated paths, they are highly correlated. The control-variate estimator:
+
+$$\hat{V}^{CV} = \hat{V}^A - \beta\!\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right), \qquad \beta = \frac{\text{Cov}(\hat{V}^A,\, \hat{V}^G)}{\text{Var}(\hat{V}^G)}$$
+
+uses the known geometric price to cancel correlated Monte Carlo noise from the arithmetic estimate. $V^G_{\text{exact}}$ is derived from the simulated paths by estimating per-asset vols and the effective basket vol from the log-price covariance matrix.
+
+### Results
+
+| Method | Copula | Price ($) | Var. Reduction |
+|--------|--------|-----------|----------------|
+| Plain MC | Gaussian | 19.95 | — |
+| Plain MC | Student-*t* | 19.11 | — |
+| Control Variate | Gaussian | — | **59.3%** |
+| Control Variate | Student-*t* | 19.11 | **57.1%** |
+
+### Interpretation
+
+**Control variate effectiveness.** The geometric basket reduces the standard error by 59.3% under the Gaussian copula and 57.1% under the Student-*t* copula at negligible additional runtime. This substantially exceeds the theoretical ~33% expected for a standard lognormal basket, a direct consequence of the high pairwise correlation structure within this AI equity basket. The CV estimates match the plain MC estimates in expectation — variance reduction only, no systematic correction — which is exactly what the method should deliver.
+
+**Copula pricing gap.** The Student-*t* copula prices the basket \$0.84 lower than the Gaussian (\$19.11 vs \$19.95 under plain MC). This is theoretically expected: the shared chi-squared mixing variable in the Student-*t* copula concentrates more probability mass in joint extreme scenarios. For a basket call, joint crashes reduce the expected payoff relative to the Gaussian, which treats extreme co-movements as asymptotically independent. The Student-*t* CV and plain MC prices coincide at \$19.11, confirming the control variate is correcting sampling noise rather than a structural bias.
+
+**Model risk.** The \$0.84 at-the-money price gap between copulas quantifies the model risk a structuring desk faces if it misspecifies the dependence structure. A desk pricing with a Gaussian copula would overprice the basket by \$0.84 relative to a Student-*t* pricer — a meaningful edge for a counterparty who correctly models tail dependence.
+
+---
+
+## Part 4 — Interactive Pricing Calculator *(In Progress)*
+
+Part 4 implements an interactive pricing calculator wrapping the most efficient and accurate method identified in Part 3: **Student-*t* copula with geometric basket control variate**. This method dominates on both dimensions — lowest standard error (via variance reduction) and most realistic dependence structure (via tail dependence). The calculator will allow users to adjust contract parameters (strike, maturity, notional) and reprice the basket call in real time, with the price and confidence interval updating live.
 
 ---
 
@@ -16,133 +152,19 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 ```
 .
-├── basket_pricing_workbook.ipynb          # Main notebook (Parts 1–4)
-├── functions_marginal_distributions.py    # SABR calibration, Breeden–Litzenberger, smile fitting
-├── copula.py                              # Correlation estimation, copula sampling, Student-t MLE
+├── basket_pricing_workbook.ipynb           # Main notebook (Parts 1–4)
+├── functions_marginal_distributions.py     # SABR calibration, Breeden–Litzenberger, smile fitting
+├── copula.py                               # Correlation estimation, copula sampling, Student-t MLE
 └── README.md
 ```
-
----
-
-## Part 1 — Risk-Neutral Marginal Distributions
-
-**Goal:** Extract market-implied risk-neutral PDFs for each asset from the observed option chain.
-
-**Pipeline:**
-
-1. **Option chain ingestion.** Live OTM option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
-
-2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula.
-
-3. **SABR calibration.** The SABR model (Hagan et al. 2002) is calibrated to each smile by minimising RMSE between the Hagan approximation and market IVs. Beta is fixed at 0.5 (standard equity convention), leaving three free parameters `(α, ρ, ν)`.
-
-4. **Dense repricing.** Calibrated SABR vols are evaluated on a 500-point strike grid spanning `[0.6S, 1.6S]` and converted to call prices via Black–Scholes.
-
-5. **Breeden–Litzenberger extraction.** The risk-neutral density is recovered as:
-
-$$q(K) = e^{rT} \frac{\partial^2 C}{\partial K^2}$$
-
-   Monotone prices are enforced via isotonic regression. The second derivative is computed using a Savitzky–Golay filter (more stable than finite differences). A light Gaussian smoothing is applied and the PDF is normalised to integrate to one.
-
-6. **Cross-validation.** SABR densities are benchmarked against a numerical (SVI / smoothing-spline) extraction. The SABR density is preferred as the primary marginal because it produces well-behaved, monotone CDFs required by the copula in Part 2.
-
-**Key outputs:** `results[ticker]` dict containing `K_grid`, `pdf`, `cdf`, `sabr_params`, `S`, `T` for each asset.
-
----
-
-## Part 2 — Copula-Based Dependence Modelling
-
-**Goal:** Model the joint terminal distribution of the five assets.
-
-### Inverse CDF Construction
-
-For each asset, the discrete `(K, CDF)` table from Part 1 is interpolated into a callable inverse CDF `F_k^{-1}`. Any uniform sample `U_k ~ U(0,1)` maps to a terminal price `S_k^T = F_k^{-1}(U_k)`, preserving the full shape of the market-implied marginal.
-
-### Pearson vs Copula Correlation
-
-The pairwise Pearson correlation matrix `R_pearson` is estimated from one year of daily log-returns. Critically, the Gaussian copula parameter `ρ_ij` is **not** the same as the Pearson correlation `r_ij` when marginals are non-Gaussian. Using `R_pearson` directly in the copula would produce simulated prices with incorrect pairwise correlations.
-
-The correct copula parameter is recovered via Brent's root-finding: for each pair `(i, j)`, find `ρ_ij` such that:
-
-$$\text{Corr}\!\left(F_i^{-1}(\Phi(Z_i)),\, F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
-
-where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations.
-
-### Gaussian Copula
-
-`n = 10,000` correlated standard normals are drawn via Cholesky decomposition of `R_copula`, transformed to uniforms `U_k = Φ(Z_k)`, and mapped to terminal prices via `F_k^{-1}`. The Gaussian copula has **zero tail dependence**: joint extreme moves are asymptotically independent.
-
-### Student-*t* Copula
-
-The Student-*t* copula introduces **symmetric tail dependence** via a shared chi-squared mixing variable. The tail dependence coefficient is:
-
-$$\lambda = 2\, t_{\nu+1}\!\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
-
-for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets.
-
-**Diagnostics:** Uniform-space scatter plots confirm elliptical (Gaussian) vs. corner-clustered (Student-*t*) dependence. Marginal recovery checks verify that histogramming the simulated prices reproduces the SABR density from Part 1.
-
----
-
-## Part 3 — Monte Carlo Pricing with Control Variate
-
-**Contract parameters:**
-
-| Parameter | Value |
-|-----------|-------|
-| Basket | Equal-weighted arithmetic average of 5 assets |
-| Strike `K` | ATM = average of spot prices |
-| Maturity `T` | Inherited from Part 1 option chain expiry |
-| Risk-free rate `r` | 5% |
-| Simulations | 10,000 |
-
-**Payoff:**
-
-$$V_T = \max\!\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K,\; 0\right)$$
-
-### Plain Monte Carlo
-
-$$\hat{V}_0 = e^{-rT} \cdot \frac{1}{N_{\text{sim}}} \sum_{i=1}^{N_{\text{sim}}} V_T^{(i)}$$
-
-Prices are computed under both copulas. The standard error quantifies Monte Carlo uncertainty.
-
-### Control Variate: Geometric Basket
-
-The geometric basket call has a known closed-form price (log-normal geometry). Since arithmetic and geometric basket payoffs are driven by the same simulated paths they are highly correlated. The control-variate estimator is:
-
-$$\hat{V}^{CV} = \hat{V}^A - \beta\!\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right)$$
-
-where `β = Cov(V̂^A, V̂^G) / Var(V̂^G)` is the OLS coefficient that minimises variance. The geometric price `V^G_exact` is derived from the simulated paths by estimating per-asset vols and the basket's effective vol via the covariance of log-prices.
-
-The control variate reduces Monte Carlo variance by approximately 33%.
-
-### Results
-
-Both copula specifications are compared on price, standard error, and runtime under plain MC and CV MC. The Student-*t* copula produces a higher basket price than the Gaussian copula, consistent with its greater tail dependence inflating joint upside (and downside) probabilities.
-
----
-
-## Part 4 — *In Progress*
-
-Part 4 has not yet been implemented.
 
 ---
 
 ## Dependencies
 
 ```
-numpy
-pandas
-scipy
-matplotlib
-yfinance
-scikit-learn       # IsotonicRegression
+numpy · pandas · scipy · matplotlib · yfinance · scikit-learn
 ```
-
-Internal modules:
-
-- `functions_marginal_distributions.py` — `fetch_option_chain`, `build_smile`, `calibrate_sabr`, `sabr_vol`, `bs_call_price`, `fit_smile`, `breeden_litzenberger`
-- `copula.py` — `estimate_correlation`, `build_inverse_cdf`, `sample_gaussian_copula`, `estimate_nu`, `sample_student_copula`
 
 ---
 
