@@ -129,7 +129,7 @@ uses the known geometric price to cancel correlated Monte Carlo noise from the a
 |--------|--------|-----------|----------------|
 | Plain MC | Gaussian | 19.95 | — |
 | Plain MC | Student-*t* | 19.11 | — |
-| Control Variate | Gaussian | — | **59.3%** |
+| Control Variate | Gaussian | 19.76 | **59.3%** |
 | Control Variate | Student-*t* | 19.11 | **57.1%** |
 
 ### Interpretation
