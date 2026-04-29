@@ -109,7 +109,7 @@ Prices are computed under both copulas. The standard error quantifies Monte Carl
 
 The geometric basket call has a known closed-form price (log-normal geometry). Since arithmetic and geometric basket payoffs are driven by the same simulated paths they are highly correlated. The control-variate estimator is:
 
-$$\hat{V}^{CV} = \hat{V}^A - \beta\!\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right)$$
+$$\hat{V}^{CV} = \hat{V}^A - \beta\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right)$$
 
 where `β = Cov(V̂^A, V̂^G) / Var(V̂^G)` is the OLS coefficient that minimises variance. The geometric price `V^G_exact` is derived from the simulated paths by estimating per-asset vols and the basket's effective vol via the covariance of log-prices.
 
