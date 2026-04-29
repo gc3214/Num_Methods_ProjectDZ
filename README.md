@@ -97,7 +97,7 @@ for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maxim
 
 **Payoff:**
 
-$$V_T = \max\!\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K,\; 0\right)$$
+$$V_T = \max\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K\; 0\right)$$
 
 ### Plain Monte Carlo
 
