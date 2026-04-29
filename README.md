@@ -1,3 +1,4 @@
+<img width="579" height="470" alt="Screenshot 2026-04-29 at 7 15 29 PM" src="https://github.com/user-attachments/assets/20af04b5-3e40-4b6b-b2fc-59e1cf2ee0c2" />
 # Basket Option Pricing — AI Equity Basket
 
 **European basket call on NVDA · PLTR · MSFT · STX · GOOGL**
