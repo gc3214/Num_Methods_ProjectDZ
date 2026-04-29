@@ -30,7 +30,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 **Pipeline:**
 
-1. **Option chain ingestion.** Live OTM option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
+1. **Option chain ingestion.** Live option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
 
 2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula.
 
