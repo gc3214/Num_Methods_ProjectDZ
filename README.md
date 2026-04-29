@@ -63,7 +63,7 @@ The pairwise Pearson correlation matrix `R_pearson` is estimated from one year o
 
 The correct copula parameter is recovered via Brent's root-finding: for each pair `(i, j)`, find `ρ_ij` such that:
 
-$$\text{Corr}\!\left(F_i^{-1}(\Phi(Z_i)),\, F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
+$$\text{Corr}\left(F_i^{-1}(\Phi(Z_i)),\ F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
 
 where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations.
 
@@ -75,7 +75,7 @@ where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluate
 
 The Student-*t* copula introduces **symmetric tail dependence** via a shared chi-squared mixing variable. The tail dependence coefficient is:
 
-$$\lambda = 2\, t_{\nu+1}\!\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
+$$\lambda = 2\, t_{\nu+1}\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
 
 for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets.
 
