@@ -66,13 +66,15 @@ The correct copula parameter is recovered via Brent's root-finding: for each pai
 
 $$\text{Corr}\left(F_i^{-1}(\Phi(Z_i)),\ F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
 
-where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations.
+where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations. 
+
+<img width="579" height="470" alt="Screenshot 2026-04-29 at 7 15 29 PM" src="https://github.com/user-attachments/assets/20af04b5-3e40-4b6b-b2fc-59e1cf2ee0c2" />
 
 ### Gaussian Copula
 
 `n = 10,000` correlated standard normals are drawn via Cholesky decomposition of `R_copula`, transformed to uniforms `U_k = Φ(Z_k)`, and mapped to terminal prices via `F_k^{-1}`. The Gaussian copula has **zero tail dependence**: joint extreme moves are asymptotically independent.
 
-<img width="579" height="470" alt="Screenshot 2026-04-29 at 7 15 29 PM" src="https://github.com/user-attachments/assets/20af04b5-3e40-4b6b-b2fc-59e1cf2ee0c2" />
+
 
 ### Student-*t* Copula
 
