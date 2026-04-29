@@ -34,7 +34,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula.
 
-3. **SABR calibration.** The SABR model (Hagan et al. 2002) is calibrated to each smile by minimising RMSE between the Hagan approximation and market IVs. Beta is fixed at 0.5 (standard equity convention), leaving three free parameters `(α, ρ, ν)`.
+3. **SABR calibration.** The SABR model is calibrated to each smile by minimising RMSE between the Hagan approximation and market IVs. Beta is fixed at 0.5 (standard equity convention), leaving three free parameters `(α, ρ, ν)`.
 
 4. **Dense repricing.** Calibrated SABR vols are evaluated on a 500-point strike grid spanning `[0.6S, 1.6S]` and converted to call prices via Black–Scholes.
 
@@ -46,7 +46,6 @@ $$q(K) = e^{rT} \frac{\partial^2 C}{\partial K^2}$$
 
 6. **Cross-validation.** SABR densities are benchmarked against a numerical (SVI / smoothing-spline) extraction. The SABR density is preferred as the primary marginal because it produces well-behaved, monotone CDFs required by the copula in Part 2.
 
-**Key outputs:** `results[ticker]` dict containing `K_grid`, `pdf`, `cdf`, `sabr_params`, `S`, `T` for each asset.
 
 ---
 

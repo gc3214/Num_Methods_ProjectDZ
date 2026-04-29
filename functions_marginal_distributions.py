@@ -210,13 +210,21 @@ def call_price_from_smile(K_arr, smile_params, S, T, r, method="svi"):
     """
     if method == "svi":
         iv_arr = svi_iv(K_arr, smile_params)
+    elif method == "sabr":
+        # Il SABR necessita del Forward price
+        F = S * np.exp(r * T)
+        iv_arr = np.array([
+            sabr_vol(F, K, T, smile_params["alpha"], smile_params["beta"], 
+                     smile_params["rho"], smile_params["nu"])
+            for K in K_arr
+        ])
     elif method == "flat":
         iv_arr = smile_params(np.zeros_like(K_arr))
-    else:
+    else: # Spline
         iv_arr = smile_params(np.log(K_arr / S))
+        
     iv_arr = np.clip(iv_arr, 0.01, 5.0)
     return np.array([bs_call_price(S, K, T, r, iv) for K, iv in zip(K_arr, iv_arr)])
-
 
 def breeden_litzenberger(smile_params, S, T, r, n_strikes=500, method="svi"):
     """
@@ -228,14 +236,22 @@ def breeden_litzenberger(smile_params, S, T, r, n_strikes=500, method="svi"):
     """
     if method == "svi":
         atm_iv = float(svi_iv(np.array([S]), smile_params)[0])
+    elif method == "sabr":
+        atm_iv = float(smile_params["alpha"]) 
     elif method == "flat":
         atm_iv = float(smile_params(np.array([0.0]))[0])
     else:
         atm_iv = float(smile_params(np.array([0.0])))
+        
     atm_iv = np.clip(atm_iv, 0.05, 2.0)
+    if method == "sabr":
+        F = S * np.exp(r * T)
+        K_min = max(S * 0.60, F * np.exp(-2.0 * atm_iv * np.sqrt(T)))
+        K_max = min(S * 1.60, F * np.exp( 2.0 * atm_iv * np.sqrt(T)))
+    else:
+        K_min = max(S * np.exp(-2.0 * atm_iv * np.sqrt(T)), S * 0.60)
+        K_max = min(S * np.exp(2.0 * atm_iv * np.sqrt(T)), S * 1.60)
 
-    K_min = max(S * np.exp(-2.0 * atm_iv * np.sqrt(T)), S * 0.60)
-    K_max = min(S * np.exp(2.0 * atm_iv * np.sqrt(T)), S * 1.60)
     K_grid = np.linspace(K_min, K_max, n_strikes)
     dK = K_grid[1] - K_grid[0]
 
@@ -252,6 +268,7 @@ def breeden_litzenberger(smile_params, S, T, r, n_strikes=500, method="svi"):
     pdf /= np.trapz(pdf, K_grid)
 
     return K_grid, pdf
+
 
 
 def extract_cdf(K_grid, pdf):
