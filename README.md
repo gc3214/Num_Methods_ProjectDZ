@@ -1,4 +1,5 @@
 
+
 # Basket Option Pricing — AI Equity Basket
 
 **European basket call on NVDA · PLTR · MSFT · STX · GOOGL**
@@ -74,7 +75,8 @@ where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluate
 
 `n = 10,000` correlated standard normals are drawn via Cholesky decomposition of `R_copula`, transformed to uniforms `U_k = Φ(Z_k)`, and mapped to terminal prices via `F_k^{-1}`. The Gaussian copula has **zero tail dependence**: joint extreme moves are asymptotically independent.
 
-
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 15 59 PM" src="https://github.com/user-attachments/assets/e2b681b0-98c2-4f41-9b51-891dfafa0a53" />
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 15 49 PM" src="https://github.com/user-attachments/assets/c31587ec-67b5-4941-a28a-cec7f4f51d07" />
 
 ### Student-*t* Copula
 
