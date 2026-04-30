@@ -32,9 +32,9 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 1. **Option chain ingestion.** Live OTM option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
 
-2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula.
+2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula using Brent's method.
 
-3. **SABR calibration.** The SABR model is calibrated to each smile by minimising RMSE between the Hagan approximation and market IVs. Beta is fixed at 0.5 (standard equity convention), leaving three free parameters `(α, ρ, ν)`.
+3. **SABR calibration.** The SABR model is calibrated to each smile by minimising RMSE between the Hagan approximation and market IVs. Beta is fixed at 0.5 (standard equity convention), leaving three free parameters `(α, ρ, ν)` which are found using **Nelder-Mead algorithm**.
 
 4. **Dense repricing.** Calibrated SABR vols are evaluated on a 500-point strike grid spanning `[0.6S, 1.6S]` and converted to call prices via Black–Scholes.
 
@@ -42,9 +42,14 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 $$q(K) = e^{rT} \frac{\partial^2 C}{\partial K^2}$$
 
-   Monotone prices are enforced via isotonic regression. The second derivative is computed using a Savitzky–Golay filter (more stable than finite differences). A light Gaussian smoothing is applied and the PDF is normalised to integrate to one.
+   Monotone prices are enforced via ****isotonic regression**. The second derivative is computed using a **Savitzky–Golay** filter (more stable than finite differences). A light **Gaussian smoothing** is applied and the PDF is normalised to integrate to one.
 
-6. **Cross-validation.** SABR densities are benchmarked against a numerical (SVI / smoothing-spline) extraction. The SABR density is preferred as the primary marginal because it produces well-behaved, monotone CDFs required by the copula in Part 2.
+6. Cdf is obtained integrating the pdf using trapezoidal rule.
+
+![Alt text](plots.png)
+
+7. **Cross-validation.** SABR densities are benchmarked against a numerical (SVI / smoothing-spline) extraction. The SABR density is preferred as the primary marginal because it produces well-behaved, monotone CDFs required by the copula in Part 2.
+
 
 
 ---
