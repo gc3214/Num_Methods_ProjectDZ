@@ -137,8 +137,21 @@ Both copula specifications are compared on price, standard error, and runtime un
 | Control Variate | Gaussian | 19.7614 | 0.1792 | 59.3% | 0.0127 |
 | Control Variate | Student-t | 19.1088 | 0.1802 | 57.1% | 0.0144 |
 
+The simulation results provide a clear comparison between standard estimation and variance reduction techniques across different dependence structures (Gaussian and Student-t copulas).
+
+#### Table Analysis
+The transition from **Plain Monte Carlo** to **Control Variate** methods shows a significant improvement in statistical reliability. By utilizing a control variable, we achieve a **Variance Reduction of ~59%** for the Gaussian case and **~57%** for the Student-t case. This is reflected in the **Standard Error (SE)**, which drops from approximately 0.28 to 0.18. This reduction implies that the estimates produced with control variates are much closer to the true theoretical value, effectively doubling the precision of the simulation.
+
+#### Computational Performance
+The **Runtime** analysis shows that the added complexity of the Control Variate method is negligible (taking only fractions of a second). Given the massive gain in accuracy, the method proves to be highly efficient, providing a superior balance between computational effort and result stability.
+
 <img width="1189" height="490" alt="image" src="https://github.com/user-attachments/assets/eb97134c-c163-40b6-bf7c-abe2e414274d" />
 
+#### Graphical Observations
+The accompanying plots illustrate the practical impact of these numerical gains:
+* **Volatility of Estimates:** The "Plain MC" trajectories in the graphs show wider fluctuations and a slower approach to the mean.
+* **Control Variate Efficiency:** In contrast, the Control Variate paths exhibit much smoother behavior and stabilize almost immediately. The "narrowing" of the confidence bands in the graphs visually confirms the 57-59% variance reduction calculated in the table.
+* **Copula Impact:** While the choice of Copula (Gaussian vs. Student-t) shifts the final price estimate, the variance reduction technique remains equally robust and effective regardless of the underlying distribution.
 ---
 
 ## Part 4 — *In Progress*
