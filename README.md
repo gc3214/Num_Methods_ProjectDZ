@@ -1,3 +1,5 @@
+
+
 # Basket Option Pricing — AI Equity Basket
 
 **European basket call on NVDA · PLTR · MSFT · STX · GOOGL**
@@ -30,7 +32,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 **Pipeline:**
 
-1. **Option chain ingestion.** Live OTM option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
+1. **Option chain ingestion.** Live option prices are fetched from Yahoo Finance. The most liquid expiry in the 14–90 day window is selected per asset.
 
 2. **Smile construction.** Raw prices are converted to implied volatilities by numerically inverting the Black–Scholes formula using Brent's method.
 
@@ -40,7 +42,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 5. **Breeden–Litzenberger extraction.** The risk-neutral density is recovered as:
 
-$$q(K) = e^{rT} \frac{\partial^2 C}{\partial K^2}$$
+$$q(K) = e^{rT}\frac{\partial^2 C}{\partial K^2}$$
 
    Monotone prices are enforced via ****isotonic regression**. The second derivative is computed using a **Savitzky–Golay** filter (more stable than finite differences). A light **Gaussian smoothing** is applied and the PDF is normalised to integrate to one.
 
@@ -68,24 +70,35 @@ The pairwise Pearson correlation matrix `R_pearson` is estimated from one year o
 
 The correct copula parameter is recovered via Brent's root-finding: for each pair `(i, j)`, find `ρ_ij` such that:
 
-$$\text{Corr}\!\left(F_i^{-1}(\Phi(Z_i)),\, F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
+$$\text{Corr}\left(F_i^{-1}(\Phi(Z_i)),\ F_j^{-1}(\Phi(Z_j))\right) = r_{ij}$$
 
-where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations.
+where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluated on a fixed quasi-random set of 20,000 standard normal pairs for stability across Brent iterations. 
+
+<img width="579" height="470" alt="Screenshot 2026-04-29 at 7 15 29 PM" src="https://github.com/user-attachments/assets/20af04b5-3e40-4b6b-b2fc-59e1cf2ee0c2" />
 
 ### Gaussian Copula
 
 `n = 10,000` correlated standard normals are drawn via Cholesky decomposition of `R_copula`, transformed to uniforms `U_k = Φ(Z_k)`, and mapped to terminal prices via `F_k^{-1}`. The Gaussian copula has **zero tail dependence**: joint extreme moves are asymptotically independent.
 
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 15 59 PM" src="https://github.com/user-attachments/assets/e2b681b0-98c2-4f41-9b51-891dfafa0a53" />
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 15 49 PM" src="https://github.com/user-attachments/assets/c31587ec-67b5-4941-a28a-cec7f4f51d07" />
+
 ### Student-*t* Copula
 
 The Student-*t* copula introduces **symmetric tail dependence** via a shared chi-squared mixing variable. The tail dependence coefficient is:
 
-$$\lambda = 2\, t_{\nu+1}\!\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
+$$\lambda = 2 t_{\nu+1}\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
 
-for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets.
+for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets. 
 
-**Diagnostics:** Uniform-space scatter plots confirm elliptical (Gaussian) vs. corner-clustered (Student-*t*) dependence. Marginal recovery checks verify that histogramming the simulated prices reproduces the SABR density from Part 1.
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 16 41 PM" src="https://github.com/user-attachments/assets/0548f810-651b-4b6a-8251-14dc22407063" />
+<img width="1237" height="258" alt="Screenshot 2026-04-29 at 7 16 30 PM" src="https://github.com/user-attachments/assets/3403fbb8-d9e1-4824-94ce-063282fd3896" />
 
+
+**Diagnostics:** Uniform-space scatter plots confirm elliptical (Gaussian) vs. corner-clustered (Student-*t*) dependence. 
+Marginal recovery checks verify that histogramming the simulated prices reproduces the SABR density from Part 1.
+
+<img width="1000" height="402" alt="Screenshot 2026-04-29 at 7 17 57 PM" src="https://github.com/user-attachments/assets/0533dacf-04fb-4f38-9826-f914137321ce" />
 ---
 
 ## Part 3 — Monte Carlo Pricing with Control Variate
@@ -102,7 +115,7 @@ for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maxim
 
 **Payoff:**
 
-$$V_T = \max\!\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K,\; 0\right)$$
+$$V_T = \max\left(\frac{1}{5}\sum_{k=1}^{5} S_k^T - K\; 0\right)$$
 
 ### Plain Monte Carlo
 
@@ -114,7 +127,7 @@ Prices are computed under both copulas. The standard error quantifies Monte Carl
 
 The geometric basket call has a known closed-form price (log-normal geometry). Since arithmetic and geometric basket payoffs are driven by the same simulated paths they are highly correlated. The control-variate estimator is:
 
-$$\hat{V}^{CV} = \hat{V}^A - \beta\!\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right)$$
+$$\hat{V}^{CV} = \hat{V}^A - \beta\left(\hat{V}^G_{MC} - V^G_{\text{exact}}\right)$$
 
 where `β = Cov(V̂^A, V̂^G) / Var(V̂^G)` is the OLS coefficient that minimises variance. The geometric price `V^G_exact` is derived from the simulated paths by estimating per-asset vols and the basket's effective vol via the covariance of log-prices.
 
@@ -124,6 +137,28 @@ The control variate reduces Monte Carlo variance by approximately 33%.
 
 Both copula specifications are compared on price, standard error, and runtime under plain MC and CV MC. The Student-*t* copula produces a higher basket price than the Gaussian copula, consistent with its greater tail dependence inflating joint upside (and downside) probabilities.
 
+| Method | Copula | Price | SE | Var Reduction (%) | Runtime (s) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Plain MC | Gaussian | 19.9469 | 0.2808 | - | 0.0018 |
+| Plain MC | Student-t | 19.1078 | 0.2753 | - | 0.0005 |
+| Control Variate | Gaussian | 19.7614 | 0.1792 | 59.3% | 0.0127 |
+| Control Variate | Student-t | 19.1088 | 0.1802 | 57.1% | 0.0144 |
+
+The simulation results provide a clear comparison between standard estimation and variance reduction techniques across different dependence structures (Gaussian and Student-t copulas).
+
+#### Table Analysis
+The transition from **Plain Monte Carlo** to **Control Variate** methods shows a significant improvement in statistical reliability. By utilizing a control variable, we achieve a **Variance Reduction of ~59%** for the Gaussian case and **~57%** for the Student-t case. This is reflected in the **Standard Error (SE)**, which drops from approximately 0.28 to 0.18. This reduction implies that the estimates produced with control variates are much closer to the true theoretical value, effectively doubling the precision of the simulation.
+
+#### Computational Performance
+The **Runtime** analysis shows that the added complexity of the Control Variate method is negligible (taking only fractions of a second). Given the massive gain in accuracy, the method proves to be highly efficient, providing a superior balance between computational effort and result stability.
+
+<img width="1189" height="490" alt="image" src="https://github.com/user-attachments/assets/eb97134c-c163-40b6-bf7c-abe2e414274d" />
+
+#### Graphical Observations
+The accompanying plots illustrate the practical impact of these numerical gains:
+* **Volatility of Estimates:** The "Plain MC" trajectories in the graphs show wider fluctuations and a slower approach to the mean.
+* **Control Variate Efficiency:** In contrast, the Control Variate paths exhibit much smoother behavior and stabilize almost immediately. The "narrowing" of the confidence bands in the graphs visually confirms the 57-59% variance reduction calculated in the table.
+* **Copula Impact:** While the choice of Copula (Gaussian vs. Student-t) shifts the final price estimate, the variance reduction technique remains equally robust and effective regardless of the underlying distribution.
 ---
 
 ## Part 4 — *In Progress*
