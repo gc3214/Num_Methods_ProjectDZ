@@ -130,6 +130,15 @@ The control variate reduces Monte Carlo variance by approximately 33%.
 
 Both copula specifications are compared on price, standard error, and runtime under plain MC and CV MC. The Student-*t* copula produces a higher basket price than the Gaussian copula, consistent with its greater tail dependence inflating joint upside (and downside) probabilities.
 
+| Method | Copula | Price | SE | Var Reduction (%) | Runtime (s) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Plain MC | Gaussian | 19.9469 | 0.2808 | - | 0.0018 |
+| Plain MC | Student-t | 19.1078 | 0.2753 | - | 0.0005 |
+| Control Variate | Gaussian | 19.7614 | 0.1792 | 59.3% | 0.0127 |
+| Control Variate | Student-t | 19.1088 | 0.1802 | 57.1% | 0.0144 |
+
+<img width="1189" height="490" alt="image" src="https://github.com/user-attachments/assets/eb97134c-c163-40b6-bf7c-abe2e414274d" />
+
 ---
 
 ## Part 4 — *In Progress*
