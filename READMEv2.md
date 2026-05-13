@@ -169,7 +169,7 @@ The accompanying plots illustrate the practical impact of these numerical gains:
 * **Copula Impact:** The Student-t copula prices the basket consistently lower than the Gaussian (\$18.80 vs \$19.62 under CV). This is consistent with theory: the Student-t copula introduces tail dependence via a shared chi-squared variable, concentrating more probability mass in joint crash scenarios and reducing the expected basket call payoff relative to the Gaussian copula, which treats extreme co-movements as asymptotically independent. The variance reduction technique remains equally robust regardless of the underlying copula specification.
 ---
 
-## Part 4 — *In Progress*
+## Part 4 - Pricing Calculator
 
 ### Objective
 
