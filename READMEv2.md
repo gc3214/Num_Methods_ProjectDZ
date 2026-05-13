@@ -171,7 +171,57 @@ The accompanying plots illustrate the practical impact of these numerical gains:
 
 ## Part 4 — *In Progress*
 
-Part 4 has not yet been implemented.
+### Objective
+
+Part 4 turns the research workflow into a reusable basket pricing calculator built around the same numerical components used in Parts 1–3. The purpose is to keep the pricing logic separate from the calibration and dependence modelling steps, so that the basket valuation can be rerun consistently under different assumptions without rewriting the entire workflow.
+
+The implementation is aimed at research usability rather than production packaging. In this repository, that means the pricing calculator is designed to accept calibrated marginals and copula settings as inputs, return basket prices and simulation outputs as results, and remain compatible with repeated experimentation on the same option dataset.
+
+### Pricing Calculator Design
+
+The calculator is organised around a modular workflow that connects the existing research components:
+
+1. `functions_marginal_distributions.py` provides the marginal calibration and density extraction routines used to build the terminal distributions.
+2. `copula.py` provides the dependence layer for Gaussian and Student-*t* copulas.
+3. `basket_pricer.py` combines the calibrated marginals and copula samples to produce basket price estimates.
+
+This separation keeps the dependence model and the payoff valuation logic distinct. That matters in a quantitative workflow because the same copula samples can be used for multiple pricing runs, and the same marginal calibration can be reused across alternative basket specifications or simulation settings.
+
+The calculator is therefore reusable at the level of inputs and outputs rather than as a monolithic script. The primary inputs are the calibrated market data, copula choice, strike, maturity, and simulation settings. The primary outputs are basket price estimates, standard error information, and simulated terminal-price scenarios.
+
+### Workflow
+
+The pricing workflow follows the same structure used throughout the notebook-based research:
+
+1. calibrate the marginal distributions from the option chain,
+2. construct the inverse-CDF mappings for each asset,
+3. generate joint terminal prices under either the Gaussian or Student-*t* copula,
+4. evaluate the basket payoff under Monte Carlo simulation,
+5. compare the plain estimator with the control-variate version when applicable.
+
+This implementation supports both Gaussian and Student-*t* copula experiments, which is important for comparing dependence assumptions in the basket valuation. The exported simulation results in `simulated_prices_gaussian.csv` and `simulated_prices_student.csv` provide a reproducible record of the generated terminal scenarios used in those comparisons.
+
+The pricing workflow is tied to the research notebooks in the repository. `basket_pricing_workbook.ipynb` and `basket_pricing_workbook_fixed.ipynb` document the full end-to-end numerical experiment, while `basket_pricer_validation_log.ipynb` records validation-oriented checks and experiment review.
+
+### Validation
+
+Validation is handled through the existing experiment outputs and test script. `basket_pricer_tests.py` provides a direct check on the pricing pipeline, while the saved outputs `copula_meta.csv`, `marginal_dist.csv`, `simulated_prices_gaussian.csv`, `simulated_prices_student.csv`, and `plots.png` provide traceable artefacts for comparing calibration, dependence, and simulation behaviour.
+
+This structure improves reproducibility because the pricing results can be cross-checked against saved simulation data and calibration summaries rather than relying only on transient notebook state. It also makes experimentation more defensible, since Gaussian and Student-*t* results can be compared using the same underlying asset universe and pricing logic.
+
+### Research Contribution
+
+The main contribution of Part 4 is the transition from analysis code to a reusable pricing workflow. Instead of treating the basket price as a one-off notebook result, the repository now supports a cleaner division between:
+
+1. calibration of the risk-neutral marginals,
+2. modelling of joint dependence through the copula layer,
+3. Monte Carlo valuation of the basket payoff.
+
+That division improves readability and makes the research easier to extend, because changes to the marginal modelling do not require changes to the pricing logic itself. It also supports a more stable comparison between Gaussian and Student-*t* dependence assumptions, which is central to the numerical results in this project.
+
+### Future Extensions
+
+Future work could extend the calculator with a more formal package interface, broader parameterisation of the payoff specification, and additional regression tests around edge cases in the calibration and simulation pipeline. A potential extension would also be to expose the pricing workflow through a lighter user-facing entry point, but that is not part of the current repository state.
 
 ---
 
