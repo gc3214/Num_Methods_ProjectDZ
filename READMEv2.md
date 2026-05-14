@@ -19,6 +19,11 @@ The motivation is a realistic sell-side structured products context: hedge funds
 ```
 .
 ├── basket_pricing_workbook.ipynb          # Main notebook (Parts 1–4)
+├── simulated_prices_gaussian.csv          # Gaussian data
+├── simulated_prices_student.csv           # T-Student data
+├── marginal_dist.csv                      # Marginal Dist. data
+├── basket_pricer.py                       # Pricer function
+├── basket_pricer_tests.py                 # Pricer tests
 ├── functions_marginal_distributions.py    # SABR calibration, Breeden–Litzenberger, smile fitting
 ├── copula.py                              # Correlation estimation, copula sampling, Student-t MLE
 └── README.md
@@ -248,3 +253,4 @@ Internal modules:
 - Hagan, P. S., Kumar, D., Lesniewski, A. S., & Woodward, D. E. (2002). *Managing smile risk.* Wilmott Magazine.
 - Breeden, D. T., & Litzenberger, R. H. (1978). *Prices of state-contingent claims implicit in option prices.* Journal of Business.
 - Sklar, A. (1959). *Fonctions de répartition à n dimensions et leurs marges.* Publications de l'Institut de Statistique de l'Université de Paris.
+- Krekel, de Kock, Korn, Man. (2002) *An Analysis of Pricing Methods for Baskets Options.* Wilmot Magazine
