@@ -44,7 +44,7 @@ The motivation is a realistic sell-side structured products context: hedge funds
 
 $$q(K) = e^{rT}\frac{\partial^2 C}{\partial K^2}$$
 
-   Monotone prices are enforced via **isotonic regression**. The second derivative is computed using a **Savitzky–Golay** filter (more stable than finite differences). A light **Gaussian smoothing** is applied and the PDF is normalised to integrate to one.
+   Monotone prices are enforced via **Isotonic regression**. The second derivative is computed using a **Savitzky–Golay** filter (more stable than finite differences). A light **Gaussian smoothing** is applied and the PDF is normalised to integrate to one.
 
 6. The CDF is obtained by integrating the PDF using the trapezoidal rule.
 
@@ -87,7 +87,7 @@ where `(Z_i, Z_j) ~ N(0, I)` with correlation `ρ_ij`. The objective is evaluate
 
 The Student-*t* copula introduces **symmetric tail dependence** via a shared chi-squared mixing variable. The tail dependence coefficient is:
 
-$$\lambda = 2 t_{\nu+1}\left(-\sqrt{(\nu+1)\,\frac{1-\rho}{1+\rho}}\right) > 0$$
+$$\lambda = 2 t_{\nu+1}\left(-\sqrt{(\nu+1)\frac{1-\rho}{1+\rho}}\right) > 0$$
 
 for any finite `ν`. The degrees-of-freedom parameter `ν` is estimated by maximum likelihood on historical log-returns. Lower `ν` implies heavier tails and stronger joint crash dependence, which is more realistic for equity baskets. 
 
