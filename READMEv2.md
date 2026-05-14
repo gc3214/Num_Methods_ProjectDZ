@@ -8,7 +8,7 @@
 
 ## Overview
 
-This project prices a European basket call option on five AI-sector equities using a three-stage framework that connects market-implied marginal distributions, copula-based dependence modelling, and variance-reduced Monte Carlo simulation. The workflow is structured as a Jupyter notebook split across four parts; Part 4 is currently in progress.
+This project prices a European basket call option on five AI-sector equities using a three-stage framework that connects market-implied marginal distributions, copula-based dependence modelling, and variance-reduced Monte Carlo simulation. The workflow is structured as a Jupyter notebook split across four parts; Part 4 then implements the methods into a pricing calculator, connecting theory to industry applications.
 
 The motivation is a realistic sell-side structured products context: hedge funds and long-only managers demand basket options on high-profile AI names for leveraged, defined-risk thematic exposure. Pricing these correctly requires respecting each asset's implied volatility surface individually and modelling the joint terminal distribution with an appropriate dependence structure.
 
